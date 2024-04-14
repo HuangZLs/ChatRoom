@@ -1,6 +1,7 @@
 import socket
 import threading
 
+
 def log_message(message):
     with open("chat_log.txt", "a", encoding="utf-8") as file:
         file.write(message + "\n")
@@ -34,7 +35,7 @@ def send_history(conn):
                     break
                 conn.send(chunk.encode('utf-8'))
     except FileNotFoundError:
-        conn.send("没有可用的聊天历史。".encode('utf-8'))
+        conn.send("[Server]没有可用的聊天历史。".encode('utf-8'))
 
 
 def client_thread(conn, addr, clients):
@@ -44,17 +45,14 @@ def client_thread(conn, addr, clients):
             message = conn.recv(1024).decode('utf-8')
             if message == "request_history":
                 send_history(conn)
-            elif message:
+            else:
                 full_message = f"{addr[0]}> {message}"
                 print(full_message)
                 log_message(full_message)
                 for c in clients:
                     c.sendall(full_message.encode('utf-8'))
-            else:
-                break
         except:
             continue
-    conn.close()
 
 
 if __name__ == "__main__":

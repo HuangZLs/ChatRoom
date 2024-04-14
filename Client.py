@@ -4,7 +4,6 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 
 class ChatClient(QtWidgets.QMainWindow):
-
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ChatRoom")
@@ -65,8 +64,6 @@ class ChatClient(QtWidgets.QMainWindow):
 
         self.client_socket = None
 
-        self.load_initial_chat()
-
         self.receive_thread = None
 
         self.set_font()
@@ -92,18 +89,21 @@ class ChatClient(QtWidgets.QMainWindow):
 
     def connect_to_server(self):
         self.HOST = self.host_input.text()
-        self.PORT = int(self.port_input.text())
+        self.PORT = self.port_input.text()
 
         if not self.HOST or not self.PORT:
             QtWidgets.QMessageBox.warning(self, "警告", "请输入主机IP和端口号")
             return
 
         try:
+            self.PORT = int(self.PORT)  # 将端口号转换为整数
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client_socket.connect((self.HOST, self.PORT))
 
             self.receive_thread = threading.Thread(target=self.receive)
             self.receive_thread.start()
+        except ValueError:
+            QtWidgets.QMessageBox.warning(self, "警告", "端口号必须是整数")
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "错误", f"无法连接到服务器：{str(e)}")
 
@@ -119,14 +119,6 @@ class ChatClient(QtWidgets.QMainWindow):
             self.client_socket.close()
             self.close()
 
-    def load_initial_chat(self):
-        try:
-            with open("chat_log.txt", "r", encoding="utf-8") as file:
-                chat_history = file.read()
-                self.chat_box.insertPlainText(chat_history)
-        except FileNotFoundError:
-            print("没有可用的聊天历史。")
-
     def receive(self):
         history_loaded = False
         while True:
@@ -135,10 +127,8 @@ class ChatClient(QtWidgets.QMainWindow):
                 if message == "history_request":
                     self.client_socket.send("request_history".encode('utf-8'))
                 elif message:
-                    self.chat_box.moveCursor(QtGui.QTextCursor.End)
-                    self.chat_box.insertPlainText(message + "\n")
+                    self.chat_box.append(message)
                     if not history_loaded:
-                        self.chat_box.insertPlainText("\n--- 以下是新消息 ---\n")
                         history_loaded = True
             except OSError:
                 break
@@ -147,6 +137,8 @@ class ChatClient(QtWidgets.QMainWindow):
         if self.client_socket:
             self.client_socket.send("退出了聊天室".encode('utf-8'))
             self.client_socket.close()
+            self.close()
+        event.accept()
 
 
 if __name__ == "__main__":
@@ -163,5 +155,3 @@ if __name__ == "__main__":
     client = ChatClient()
     client.show()
     sys.exit(app.exec_())
-
-# huangZL huangZL huangZL huangZL
