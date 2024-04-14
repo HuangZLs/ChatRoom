@@ -103,14 +103,15 @@ class ChatClient(QtWidgets.QMainWindow):
             self.receive_thread = threading.Thread(target=self.receive)
             self.receive_thread.start()
         except ValueError:
+            self.client_socket = None
             QtWidgets.QMessageBox.warning(self, "警告", "端口号错误！")
         except Exception as e:
+            self.client_socket = None
             QtWidgets.QMessageBox.critical(self, "错误", f"无法连接到服务器：{str(e)}")
 
     def send_message(self):
         if not self.client_socket:
             QtWidgets.QMessageBox.warning(self, "警告", "请先连接到服务器")
-            return
 
         message = self.entry_field.text()
         self.entry_field.clear()
