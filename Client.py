@@ -67,6 +67,21 @@ class ChatClient(QtWidgets.QMainWindow):
 
         self.receive_thread = None
 
+        self.set_font()
+
+    def set_font(self):
+        font = QtGui.QFont("微软雅黑", 10)
+        self.setFont(font)
+
+        self.host_label.setFont(font)
+        self.host_input.setFont(font)
+        self.port_label.setFont(font)
+        self.port_input.setFont(font)
+        self.connect_button.setFont(font)
+        self.chat_box.setFont(font)
+        self.entry_field.setFont(font)
+        self.send_button.setFont(font)
+
     def toggle_dark_mode(self, state):
         if state == QtCore.Qt.Checked:
             self.setStyleSheet("background-color: #1e1e1e; color: #fff;")
@@ -98,7 +113,7 @@ class ChatClient(QtWidgets.QMainWindow):
         message = self.entry_field.text()
         self.entry_field.clear()
         self.client_socket.send(message.encode('utf-8'))
-        if message == "{quit}":
+        if message == "退出了聊天室":
             self.client_socket.close()
             self.close()
 
@@ -128,7 +143,7 @@ class ChatClient(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         if self.client_socket:
-            self.client_socket.send("{quit}".encode('utf-8'))
+            self.client_socket.send("退出了聊天室".encode('utf-8'))
             self.client_socket.close()
 
 if __name__ == "__main__":

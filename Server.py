@@ -45,7 +45,7 @@ def client_thread(conn, addr, clients):
             if message == "request_history":
                 send_history(conn)
             elif message:
-                full_message = f"{addr[0]}: {message}"
+                full_message = f"{addr[0]}> {message}"
                 print(full_message)
                 log_message(full_message)
                 for c in clients:
