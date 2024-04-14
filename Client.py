@@ -120,13 +120,18 @@ class ChatClient(QtWidgets.QMainWindow):
             self.close()
 
     def receive(self):
+        history_loaded = False
         while True:
             try:
                 message = self.client_socket.recv(1024).decode('utf-8')
                 if message == "history_request":
                     self.client_socket.send("request_history".encode('utf-8'))
                 elif message:
-                    self.chat_box.append(message)
+                    self.chat_box.moveCursor(QtGui.QTextCursor.End)
+                    self.chat_box.insertPlainText(message + "\n")
+                    if not history_loaded:
+                        self.chat_box.insertPlainText("\n--- 以下是新消息 ---\n")
+                        history_loaded = True
             except OSError:
                 break
 
