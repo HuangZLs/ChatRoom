@@ -2,6 +2,7 @@ import socket
 import threading
 from PyQt5 import QtWidgets, QtGui, QtCore
 
+
 class ChatClient(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -146,8 +147,10 @@ class ChatClient(QtWidgets.QMainWindow):
             self.client_socket.send("退出了聊天室".encode('utf-8'))
             self.client_socket.close()
 
+
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle("Fusion")
     palette = QtGui.QPalette()
@@ -159,3 +162,5 @@ if __name__ == "__main__":
     client = ChatClient()
     client.show()
     sys.exit(app.exec_())
+
+# test test 123
