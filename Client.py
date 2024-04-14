@@ -4,6 +4,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 
 class ChatClient(QtWidgets.QMainWindow):
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ChatRoom")
@@ -162,3 +163,5 @@ if __name__ == "__main__":
     client = ChatClient()
     client.show()
     sys.exit(app.exec_())
+
+# huangZL huangZL huangZL huangZL
