@@ -1,82 +1,146 @@
 import socket
 import threading
-import tkinter as tk
-from tkinter import scrolledtext
-from tkinter.simpledialog import askstring
+from PyQt5 import QtWidgets, QtGui, QtCore
 
-def receive():
-    history_loaded = False
-    while True:
+class ChatClient(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("ChatRoom")
+        self.setGeometry(100, 100, 600, 400)
+
+        self.central_widget = QtWidgets.QWidget(self)
+        self.setCentralWidget(self.central_widget)
+
+        self.layout = QtWidgets.QVBoxLayout(self.central_widget)
+
+        self.top_layout = QtWidgets.QHBoxLayout()
+        self.chat_layout = QtWidgets.QVBoxLayout()
+
+        self.layout.addLayout(self.top_layout)
+        self.layout.addLayout(self.chat_layout)
+
+        self.dark_mode_checkbox = QtWidgets.QCheckBox("深色模式", self)
+        self.dark_mode_checkbox.stateChanged.connect(self.toggle_dark_mode)
+        self.top_layout.addWidget(self.dark_mode_checkbox)
+
+        self.host_label = QtWidgets.QLabel("主机IP:", self)
+        self.host_label.setFont(QtGui.QFont("Helvetica", 10))
+        self.top_layout.addWidget(self.host_label)
+
+        self.host_input = QtWidgets.QLineEdit(self)
+        self.host_input.setFont(QtGui.QFont("Helvetica", 10))
+        self.top_layout.addWidget(self.host_input)
+
+        self.port_label = QtWidgets.QLabel("端口号:", self)
+        self.port_label.setFont(QtGui.QFont("Helvetica", 10))
+        self.top_layout.addWidget(self.port_label)
+
+        self.port_input = QtWidgets.QLineEdit(self)
+        self.port_input.setFont(QtGui.QFont("Helvetica", 10))
+        self.top_layout.addWidget(self.port_input)
+
+        self.connect_button = QtWidgets.QPushButton("连接", self)
+        self.connect_button.setFont(QtGui.QFont("Helvetica", 10))
+        self.connect_button.clicked.connect(self.connect_to_server)
+        self.top_layout.addWidget(self.connect_button)
+
+        self.chat_box = QtWidgets.QTextEdit(self)
+        self.chat_box.setReadOnly(True)
+        self.chat_layout.addWidget(self.chat_box)
+
+        self.entry_field = QtWidgets.QLineEdit(self)
+        self.entry_field.setFont(QtGui.QFont("Helvetica", 12))
+        self.entry_field.returnPressed.connect(self.send_message)
+        self.chat_layout.addWidget(self.entry_field)
+
+        self.send_button = QtWidgets.QPushButton("发送", self)
+        self.send_button.setFont(QtGui.QFont("Helvetica", 12))
+        self.send_button.clicked.connect(self.send_message)
+        self.chat_layout.addWidget(self.send_button)
+
+        self.HOST = ""
+        self.PORT = 0
+
+        self.client_socket = None
+
+        self.load_initial_chat()
+
+        self.receive_thread = None
+
+    def toggle_dark_mode(self, state):
+        if state == QtCore.Qt.Checked:
+            self.setStyleSheet("background-color: #1e1e1e; color: #fff;")
+        else:
+            self.setStyleSheet("background-color: #fff; color: #000;")
+
+    def connect_to_server(self):
+        self.HOST = self.host_input.text()
+        self.PORT = int(self.port_input.text())
+
+        if not self.HOST or not self.PORT:
+            QtWidgets.QMessageBox.warning(self, "警告", "请输入主机IP和端口号")
+            return
+
         try:
-            message = client_socket.recv(1024).decode('utf-8')
-            if message == "history_request":
-                client_socket.send("request_history".encode('utf-8'))
-            elif message:
-                chat_box.config(state='normal')
-                chat_box.insert(tk.END, message + "\n")
-                chat_box.yview(tk.END)
-                chat_box.config(state='disabled')
-                if not history_loaded:
-                    chat_box.insert(tk.END, "\n--- 以下是新消息 ---\n")
-                    history_loaded = True
-        except OSError:  # 可能客户已离开聊天室。
-            break
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client_socket.connect((self.HOST, self.PORT))
 
+            self.receive_thread = threading.Thread(target=self.receive)
+            self.receive_thread.start()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "错误", f"无法连接到服务器：{str(e)}")
 
-def send(event=None):
-    message = my_msg.get()
-    my_msg.set("")  # 清空输入字段。
-    client_socket.send(message.encode('utf-8'))
-    if message == "{quit}":
-        client_socket.close()
-        window.quit()
+    def send_message(self):
+        if not self.client_socket:
+            QtWidgets.QMessageBox.warning(self, "警告", "请先连接到服务器")
+            return
 
-def on_closing(event=None):
-    my_msg.set("{quit}")
-    send()
+        message = self.entry_field.text()
+        self.entry_field.clear()
+        self.client_socket.send(message.encode('utf-8'))
+        if message == "{quit}":
+            self.client_socket.close()
+            self.close()
 
-def load_initial_chat():
-    try:
-        with open("chat_log.txt", "r", encoding="utf-8") as file:
-            chat_history = file.read()
-            chat_box.config(state='normal')
-            chat_box.insert(tk.END, chat_history)
-            chat_box.yview(tk.END)
-            chat_box.config(state='disabled')
-    except FileNotFoundError:
-        print("没有可用的聊天历史。")
+    def load_initial_chat(self):
+        try:
+            with open("chat_log.txt", "r", encoding="utf-8") as file:
+                chat_history = file.read()
+                self.chat_box.insertPlainText(chat_history)
+        except FileNotFoundError:
+            print("没有可用的聊天历史。")
 
-# 创建窗口
-window = tk.Tk()
-window.title("ChatRoom")
+    def receive(self):
+        history_loaded = False
+        while True:
+            try:
+                message = self.client_socket.recv(1024).decode('utf-8')
+                if message == "history_request":
+                    self.client_socket.send("request_history".encode('utf-8'))
+                elif message:
+                    self.chat_box.moveCursor(QtGui.QTextCursor.End)
+                    self.chat_box.insertPlainText(message + "\n")
+                    if not history_loaded:
+                        self.chat_box.insertPlainText("\n--- 以下是新消息 ---\n")
+                        history_loaded = True
+            except OSError:
+                break
 
-messages_frame = tk.Frame(window)
-my_msg = tk.StringVar()  # 发送消息。
-my_msg.set("在这里输入消息。")
-scrollbar = tk.Scrollbar(messages_frame)  # 滚动查看历史消息。
-# 下面将包含消息。
-chat_box = scrolledtext.ScrolledText(messages_frame, height=15, width=50, yscrollcommand=scrollbar.set)
-scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-chat_box.pack(side=tk.LEFT, fill=tk.BOTH)
-chat_box.pack()
-messages_frame.pack()
+    def closeEvent(self, event):
+        if self.client_socket:
+            self.client_socket.send("{quit}".encode('utf-8'))
+            self.client_socket.close()
 
-entry_field = tk.Entry(window, textvariable=my_msg)
-entry_field.bind("<Return>", send)
-entry_field.pack()
-send_button = tk.Button(window, text="发送", command=send)
-send_button.pack()
-
-window.protocol("WM_DELETE_WINDOW", on_closing)
-
-# Socket 部分
-HOST = askstring('主机', '输入主机IP')
-PORT = askstring('端口', '输入端口号')
-
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client_socket.connect((HOST, int(PORT)))
-load_initial_chat()
-
-threading.Thread(target=receive).start()
-
-window.mainloop()
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    app.setStyle("Fusion")
+    palette = QtGui.QPalette()
+    palette.setColor(QtGui.QPalette.Window, QtGui.QColor(240, 240, 240))
+    palette.setColor(QtGui.QPalette.WindowText, QtGui.QColor(0, 0, 0))
+    app.setPalette(palette)
+    font = QtGui.QFont("Helvetica", 12)
+    app.setFont(font)
+    client = ChatClient()
+    client.show()
+    sys.exit(app.exec_())
