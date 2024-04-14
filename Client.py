@@ -158,3 +158,4 @@ if __name__ == "__main__":
     client = ChatClient()
     client.show()
     sys.exit(app.exec_())
+
