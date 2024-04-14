@@ -103,8 +103,10 @@ class ChatClient(QtWidgets.QMainWindow):
             self.receive_thread = threading.Thread(target=self.receive)
             self.receive_thread.start()
         except ValueError:
-            QtWidgets.QMessageBox.warning(self, "警告", "端口号错误！")
+            self.client_socket = None
+            QtWidgets.QMessageBox.warning(self, "警告", "端口号必须是整数")
         except Exception as e:
+            self.client_socket = None
             QtWidgets.QMessageBox.critical(self, "错误", f"无法连接到服务器：{str(e)}")
 
     def send_message(self):
@@ -120,6 +122,7 @@ class ChatClient(QtWidgets.QMainWindow):
             self.close()
 
     def receive(self):
+        history_loaded = False
         while True:
             try:
                 message = self.client_socket.recv(1024).decode('utf-8')
@@ -127,6 +130,8 @@ class ChatClient(QtWidgets.QMainWindow):
                     self.client_socket.send("request_history".encode('utf-8'))
                 elif message:
                     self.chat_box.append(message)
+                    if not history_loaded:
+                        history_loaded = True
             except OSError:
                 break
 
